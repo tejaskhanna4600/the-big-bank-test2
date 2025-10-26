@@ -1,37 +1,18 @@
 """
-The Big Bank Theory - Clean Multiplayer Game
-Simple, working implementation without refresh issues
+The Big Bank Theory - Simple Multiplayer Game
+No passwords, just simple dice rolling and admin control
 """
 import streamlit as st
 import json
 import os
 import random
 from datetime import datetime
-from typing import Dict, List, Optional
-
-# Game configuration
-PASSWORDS = {
-    "ADMIN": "admin123",
-    "T1": "team1", "T2": "team2", "T3": "team3", "T4": "team4", "T5": "team5"
-}
-
-USER_TYPES = {
-    "ADMIN": "Admin Panel",
-    "T1": "Team 1", "T2": "Team 2", "T3": "Team 3", "T4": "Team 4", "T5": "Team 5"
-}
 
 # Game state file
 GAME_STATE_FILE = "game_state.json"
 
-def init_session_state():
-    """Initialize session state"""
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-        st.session_state.user_type = None
-        st.session_state.game_state = create_initial_game_state()
-
-def create_initial_game_state():
-    """Create initial game state"""
+def init_game_state():
+    """Initialize game state"""
     return {
         'teams': [
             {'id': 'T1', 'name': 'Team 1', 'balance': 10000000, 'position': 0, 'color': '#D32F2F'},
@@ -42,7 +23,6 @@ def create_initial_game_state():
         ],
         'current_team': 0,
         'dice_roll': 0,
-        'actions': [],
         'properties': [
             {'name': 'START/GO', 'price': 0, 'rent': 0, 'owner': None},
             {'name': 'Digital Marketing', 'price': 2000000, 'rent': 500000, 'owner': None},
@@ -83,258 +63,89 @@ def load_game_state():
         with open(GAME_STATE_FILE, 'r') as f:
             st.session_state.game_state = json.load(f)
 
-def add_action(action_type: str, team_id: str, params: dict = None):
-    """Add action to queue"""
-    action = {
-        'id': f"{team_id}_{datetime.now().timestamp()}",
-        'type': action_type,
-        'team_id': team_id,
-        'params': params or {},
-        'timestamp': datetime.now().isoformat(),
-        'status': 'pending'
-    }
-    st.session_state.game_state['actions'].append(action)
-    save_game_state()
-    return action['id']
-
-def get_pending_actions():
-    """Get pending actions"""
-    return [a for a in st.session_state.game_state['actions'] if a['status'] == 'pending']
-
-def approve_action(action_id: str):
-    """Approve and execute action"""
-    for action in st.session_state.game_state['actions']:
-        if action['id'] == action_id:
-            action['status'] = 'approved'
-            execute_action(action)
-            save_game_state()
-            return True
-    return False
-
-def reject_action(action_id: str):
-    """Reject action"""
-    for action in st.session_state.game_state['actions']:
-        if action['id'] == action_id:
-            action['status'] = 'rejected'
-            save_game_state()
-            return True
-    return False
-
-def execute_action(action):
-    """Execute approved action"""
+def roll_dice():
+    """Roll dice for current team"""
     game_state = st.session_state.game_state
-    team_id = action['team_id']
-    team = next(t for t in game_state['teams'] if t['id'] == team_id)
+    dice = random.randint(1, 6)
+    game_state['dice_roll'] = dice
     
-    if action['type'] == 'roll_dice':
-        dice = random.randint(1, 6)
-        game_state['dice_roll'] = dice
-        new_pos = (team['position'] + dice) % 24
-        if team['position'] + dice >= 24:
-            team['balance'] += 2000000
-        team['position'] = new_pos
-        
-    elif action['type'] == 'buy_property':
-        prop_index = action['params'].get('property_index', team['position'])
-        prop = game_state['properties'][prop_index]
-        if prop['owner'] is None and team['balance'] >= prop['price']:
-            team['balance'] -= prop['price']
-            prop['owner'] = team_id
-            
-    elif action['type'] == 'sell_property':
-        prop_index = action['params'].get('property_index')
-        prop = game_state['properties'][prop_index]
-        if prop['owner'] == team_id:
-            refund = prop['price'] // 2
-            team['balance'] += refund
-            prop['owner'] = None
-            
-    elif action['type'] == 'end_turn':
-        game_state['current_team'] = (game_state['current_team'] + 1) % 5
-        game_state['dice_roll'] = 0
+    # Move current team
+    current_team = game_state['teams'][game_state['current_team']]
+    new_pos = (current_team['position'] + dice) % 24
+    
+    # Check if passed GO
+    if current_team['position'] + dice >= 24:
+        current_team['balance'] += 2000000
+    
+    current_team['position'] = new_pos
+    save_game_state()
+    return dice
 
-def login_page():
-    """Show login page"""
+def next_turn():
+    """Move to next team's turn"""
+    game_state = st.session_state.game_state
+    game_state['current_team'] = (game_state['current_team'] + 1) % 5
+    game_state['dice_roll'] = 0
+    save_game_state()
+
+def main():
+    """Main app function"""
+    st.set_page_config(
+        page_title="The Big Bank Theory",
+        layout="wide",
+        page_icon="🏦"
+    )
+    
+    # Initialize session state
+    if 'game_state' not in st.session_state:
+        st.session_state.game_state = init_game_state()
+    
+    # Load game state
+    load_game_state()
+    
+    game_state = st.session_state.game_state
+    
+    # Title
     st.title("🏦 The Big Bank Theory")
     st.markdown("---")
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown("### Login")
-        user_type = st.selectbox("Select your role:", list(USER_TYPES.keys()), format_func=lambda x: USER_TYPES[x])
-        password = st.text_input("Password:", type="password")
-        
-        if st.button("Login", use_container_width=True, type="primary"):
-            if password == PASSWORDS.get(user_type):
-                st.session_state.authenticated = True
-                st.session_state.user_type = user_type
-                st.success("Login successful!")
-                st.rerun()
-            else:
-                st.error("❌ Incorrect password!")
-        
-        st.markdown("---")
-        st.info("👥 Share this link with participants. Each team needs their password.")
-
-def team_page(team_id: str):
-    """Show team page"""
-    game_state = st.session_state.game_state
-    team = next(t for t in game_state['teams'] if t['id'] == team_id)
-    current_team = game_state['teams'][game_state['current_team']]
-    
-    st.title(f"🏦 {team['name']} Control Panel")
-    
-    # Dice roll display
-    if game_state['dice_roll'] > 0:
-        if current_team['id'] == team_id:
-            st.markdown(f"""
-            <div style='background-color: #FFD700; color: black; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; border: 3px solid #FFA500;'>
-            <h1>🎲 DICE ROLLED: {game_state['dice_roll']} 🎲</h1>
-            <p>You rolled a {game_state['dice_roll']}!</p>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div style='background-color: #E0E0E0; color: black; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;'>
-            <h3>🎲 {current_team['name']} rolled: {game_state['dice_roll']}</h3>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Team info
-    st.markdown(f"""
-    <div style='background-color: {team['color']}; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px;'>
-    <h2>Balance: ₹{team['balance']:,}</h2>
-    <p>Position: {team['position']} | {game_state['properties'][team['position']]['name']}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Action buttons
-    st.markdown("### Action Center")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🎲 Roll Dice", use_container_width=True, type="primary"):
-            add_action("roll_dice", team_id)
-            st.success("✅ Dice roll request sent to admin!")
-        
-        if st.button("✅ End Turn", use_container_width=True):
-            if current_team['id'] == team_id:
-                add_action("end_turn", team_id)
-                st.success("✅ Turn end request sent to admin!")
-            else:
-                st.warning("⚠️ It's not your turn yet!")
-    
-    with col2:
-        prop = game_state['properties'][team['position']]
-        if prop['owner'] is None and prop['price'] > 0:
-            if st.button(f"💰 Buy {prop['name']}", use_container_width=True):
-                if team['balance'] >= prop['price']:
-                    add_action("buy_property", team_id, {"property_index": team['position']})
-                    st.success("✅ Buy property request sent to admin!")
-                else:
-                    st.error("❌ Insufficient balance!")
-        
-        if st.button("🏠 My Properties", use_container_width=True):
-            owned = [p for p in game_state['properties'] if p['owner'] == team_id]
-            if owned:
-                for prop in owned:
-                    st.write(f"• {prop['name']} - Rent: ₹{prop['rent']:,}")
-            else:
-                st.info("You don't own any properties yet")
-    
-    # Current property info
-    st.markdown("---")
-    st.subheader("📍 Current Position")
-    prop = game_state['properties'][team['position']]
-    st.markdown(f"**{prop['name']}**")
-    if prop['price'] > 0:
-        st.markdown(f"- Price: ₹{prop['price']:,}")
-        st.markdown(f"- Rent: ₹{prop['rent']:,}")
-        if prop['owner']:
-            owner_team = next(t for t in game_state['teams'] if t['id'] == prop['owner'])
-            st.markdown(f"- Owner: {owner_team['name']}")
-    
-    # Pending actions
-    pending = [a for a in get_pending_actions() if a['team_id'] == team_id]
-    if pending:
-        st.markdown("---")
-        st.subheader("⏳ Pending Actions")
-        for action in pending:
-            st.markdown(f"⏳ {action['type']} - Waiting for admin approval")
-
-def admin_page():
-    """Show admin page"""
-    game_state = st.session_state.game_state
-    
-    st.title("🏦 Admin Control Panel")
-    
-    # Game controls
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("▶️ Start Game", use_container_width=True, type="primary"):
-            game_state['game_started'] = True
-            save_game_state()
-            st.success("Game started!")
-        
-        if st.button("🔄 Reset Game", use_container_width=True):
-            st.session_state.game_state = create_initial_game_state()
-            save_game_state()
-            st.success("Game reset!")
-    
-    with col2:
-        if st.button("💾 Save Game", use_container_width=True):
-            save_game_state()
-            st.success("Game saved!")
-    
-    with col3:
-        if st.button("🔄 Load Game", use_container_width=True):
-            load_game_state()
-            st.success("Game loaded!")
     
     # Current team display
     current_team = game_state['teams'][game_state['current_team']]
     st.markdown(f"""
-    <div style='background-color: {current_team['color']}; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px;'>
-    <h2>Current Turn: {current_team['name']}</h2>
-    <p>Balance: ₹{current_team['balance']:,} | Position: {current_team['position']}</p>
+    <div style='background-color: {current_team['color']}; color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;'>
+    <h1>Current Turn: {current_team['name']}</h1>
+    <h2>Balance: ₹{current_team['balance']:,}</h2>
+    <h3>Position: {current_team['position']} - {game_state['properties'][current_team['position']]['name']}</h3>
     </div>
     """, unsafe_allow_html=True)
     
-    # Pending actions
-    st.markdown("---")
-    st.subheader("⏳ Pending Action Requests")
+    # Dice roll display
+    if game_state['dice_roll'] > 0:
+        st.markdown(f"""
+        <div style='background-color: #FFD700; color: black; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; border: 3px solid #FFA500;'>
+        <h1>🎲 DICE ROLLED: {game_state['dice_roll']} 🎲</h1>
+        <p>{current_team['name']} rolled a {game_state['dice_roll']}!</p>
+        </div>
+        """, unsafe_allow_html=True)
     
-    pending_actions = get_pending_actions()
+    # Main controls
+    col1, col2, col3 = st.columns(3)
     
-    if pending_actions:
-        for action in pending_actions:
-            team = next(t for t in game_state['teams'] if t['id'] == action['team_id'])
-            
-            with st.container():
-                st.markdown(f"### {team['name']} - {action['type']}")
-                st.markdown(f"**Parameters:** {action['params']}")
-                st.markdown(f"*Requested at: {action['timestamp']}*")
-                
-                col1, col2, col3 = st.columns([1, 1, 2])
-                
-                with col1:
-                    if st.button("✅ Approve", key=f"approve_{action['id']}", use_container_width=True):
-                        if approve_action(action['id']):
-                            st.success("Action approved and executed!")
-                        else:
-                            st.error("Failed to approve action")
-                
-                with col2:
-                    if st.button("❌ Reject", key=f"reject_{action['id']}", use_container_width=True):
-                        if reject_action(action['id']):
-                            st.warning("Action rejected!")
-                        else:
-                            st.error("Failed to reject action")
-                
-                st.markdown("---")
-    else:
-        st.info("No pending actions")
+    with col1:
+        if st.button("🎲 Roll Dice", use_container_width=True, type="primary"):
+            dice = roll_dice()
+            st.success(f"🎲 {current_team['name']} rolled a {dice}!")
+    
+    with col2:
+        if st.button("✅ End Turn", use_container_width=True):
+            next_turn()
+            st.success("Turn ended!")
+    
+    with col3:
+        if st.button("🔄 Reset Game", use_container_width=True):
+            st.session_state.game_state = init_game_state()
+            save_game_state()
+            st.success("Game reset!")
     
     # All teams status
     st.markdown("---")
@@ -343,76 +154,109 @@ def admin_page():
     cols = st.columns(5)
     for idx, team in enumerate(game_state['teams']):
         with cols[idx]:
+            is_current = idx == game_state['current_team']
+            border_color = "#FFD700" if is_current else team['color']
+            border_width = "3px" if is_current else "2px"
+            
             st.markdown(f"""
-            <div style='border: 2px solid {team['color']}; padding: 10px; border-radius: 5px;'>
-            <h4>{team['name']}</h4>
-            <p>₹{team['balance']:,}</p>
-            <p>Pos: {team['position']}</p>
+            <div style='border: {border_width} solid {border_color}; padding: 15px; border-radius: 10px; background-color: {team['color']}20;'>
+            <h3 style='color: {team['color']}; margin: 0;'>{team['name']}</h3>
+            <p style='margin: 5px 0; font-size: 18px; font-weight: bold;'>₹{team['balance']:,}</p>
+            <p style='margin: 5px 0;'>Pos: {team['position']}</p>
+            <p style='margin: 5px 0; font-size: 12px;'>{game_state['properties'][team['position']]['name']}</p>
             </div>
             """, unsafe_allow_html=True)
-
-def main():
-    """Main app function"""
-    st.set_page_config(
-        page_title="The Big Bank Theory",
-        layout="wide",
-        page_icon="🏦",
-        initial_sidebar_state="collapsed"
-    )
     
-    # Initialize session state
-    init_session_state()
+    # Admin controls
+    st.markdown("---")
+    st.subheader("🎮 Admin Controls")
     
-    # Load game state
-    load_game_state()
+    # Manual balance adjustment
+    st.markdown("#### 💰 Adjust Team Balance")
+    admin_col1, admin_col2, admin_col3 = st.columns(3)
     
-    # Check authentication
-    if not st.session_state.authenticated:
-        login_page()
-        return
+    with admin_col1:
+        team_select = st.selectbox("Select Team:", [f"Team {i+1}" for i in range(5)])
+        team_idx = int(team_select.split()[1]) - 1
     
-    # Hide default Streamlit elements
-    hide_streamlit_style = """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    </style>
-    """
-    st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+    with admin_col2:
+        amount = st.number_input("Amount (can be negative):", value=0, step=100000)
     
-    # Sidebar with logout
-    with st.sidebar:
-        st.markdown("### ⚙️ Controls")
-        
-        if st.button("🚪 Logout", use_container_width=True):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-        
-        # Status info
-        st.markdown("---")
-        st.markdown("### 📊 Status")
-        game_state = st.session_state.game_state
-        current_team = game_state['teams'][game_state['current_team']]
-        st.markdown(f"**Current Turn:** {current_team['name']}")
+    with admin_col3:
+        if st.button("💸 Adjust Balance", use_container_width=True):
+            game_state['teams'][team_idx]['balance'] += amount
+            save_game_state()
+            st.success(f"Balance adjusted by ₹{amount:,}")
+    
+    # Manual position adjustment
+    st.markdown("#### 📍 Move Team Position")
+    pos_col1, pos_col2, pos_col3 = st.columns(3)
+    
+    with pos_col1:
+        pos_team_select = st.selectbox("Select Team:", [f"Team {i+1}" for i in range(5)], key="pos_team")
+        pos_team_idx = int(pos_team_select.split()[1]) - 1
+    
+    with pos_col2:
+        new_position = st.number_input("New Position:", min_value=0, max_value=23, value=0)
+    
+    with pos_col3:
+        if st.button("🚀 Move Team", use_container_width=True):
+            game_state['teams'][pos_team_idx]['position'] = new_position
+            save_game_state()
+            st.success(f"Moved to position {new_position}")
+    
+    # Property management
+    st.markdown("#### 🏠 Give Property to Team")
+    prop_col1, prop_col2, prop_col3 = st.columns(3)
+    
+    with prop_col1:
+        prop_team_select = st.selectbox("Select Team:", [f"Team {i+1}" for i in range(5)], key="prop_team")
+        prop_team_idx = int(prop_team_select.split()[1]) - 1
+    
+    with prop_col2:
+        property_select = st.selectbox("Select Property:", 
+                                     [f"{i}: {prop['name']}" for i, prop in enumerate(game_state['properties']) if prop['price'] > 0])
+        prop_idx = int(property_select.split(':')[0])
+    
+    with prop_col3:
+        if st.button("🏠 Give Property", use_container_width=True):
+            if game_state['properties'][prop_idx]['owner'] is None:
+                game_state['properties'][prop_idx]['owner'] = game_state['teams'][prop_team_idx]['id']
+                save_game_state()
+                st.success(f"Gave {game_state['properties'][prop_idx]['name']} to {game_state['teams'][prop_team_idx]['name']}")
+            else:
+                st.error("Property already owned!")
+    
+    # Game state info
+    st.markdown("---")
+    st.subheader("📊 Game State")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("💾 Save Game", use_container_width=True):
+            save_game_state()
+            st.success("Game saved!")
+    
+    with col2:
+        if st.button("🔄 Load Game", use_container_width=True):
+            load_game_state()
+            st.success("Game loaded!")
+    
+    with col3:
+        st.markdown(f"**Current Turn:** {game_state['current_team'] + 1}")
         st.markdown(f"**Dice Roll:** {game_state['dice_roll'] if game_state['dice_roll'] > 0 else 'None'}")
-        st.markdown(f"**Pending Actions:** {len(get_pending_actions())}")
-        
-        # Instructions
-        st.markdown("---")
-        st.info("💡 **No auto-refresh** - Actions update instantly")
-        st.markdown("🔄 **Manual control** - Click buttons to see updates")
     
-    # Route to appropriate page
-    user_type = st.session_state.user_type
+    # Properties owned by teams
+    st.markdown("---")
+    st.subheader("🏠 Properties Owned")
     
-    if user_type == "ADMIN":
-        admin_page()
-    elif user_type in ["T1", "T2", "T3", "T4", "T5"]:
-        team_page(user_type)
-    else:
-        st.error("Invalid user type")
+    for team in game_state['teams']:
+        owned_props = [prop for prop in game_state['properties'] if prop['owner'] == team['id']]
+        if owned_props:
+            st.markdown(f"**{team['name']}:** {', '.join([prop['name'] for prop in owned_props])}")
+        else:
+            st.markdown(f"**{team['name']}:** No properties owned")
 
 if __name__ == "__main__":
     main()
