@@ -106,10 +106,7 @@ def main():
     
     game_state = st.session_state.game_state
     
-    # Auto-refresh using meta tag
-    st.markdown("""
-    <meta http-equiv="refresh" content="3">
-    """, unsafe_allow_html=True)
+    # No auto-refresh - manual updates only
     
     # Title
     st.title("🏦 The Big Bank Theory")
@@ -258,12 +255,19 @@ def main():
             st.rerun()
     
     with col3:
+        if st.button("🔄 Refresh Page", use_container_width=True):
+            st.rerun()
+    
+    # Game state info
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    
+    with col1:
         st.markdown(f"**Current Turn:** {game_state['current_team'] + 1}")
         st.markdown(f"**Dice Roll:** {game_state['dice_roll'] if game_state['dice_roll'] > 0 else 'None'}")
     
-    # Auto-refresh status
-    st.markdown("---")
-    st.info("🔄 **Auto-refresh:** Every 3 seconds | **Manual:** Click buttons for instant updates")
+    with col2:
+        st.info("🔄 **Manual Updates:** Click buttons for instant updates | **No auto-refresh** - No white screen issues")
     
     # Properties owned by teams
     st.markdown("---")

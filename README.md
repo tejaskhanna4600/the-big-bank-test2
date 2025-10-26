@@ -7,9 +7,9 @@ A completely simple web app without passwords. Just dice rolling and admin contr
 - **No passwords** - Anyone can access
 - **Simple dice rolling** - Players roll dice and see results
 - **Admin controls** - Admin can adjust balances, move teams, give properties
-- **Auto-refresh** - Updates every 3 seconds automatically
-- **Manual refresh** - Click "Update State" button for instant updates
-- **Real-time updates** - Everyone sees changes instantly
+- **Manual updates** - Click buttons for instant updates
+- **No auto-refresh** - No white screen issues
+- **Real-time updates** - Everyone sees changes when they refresh
 
 ## 🚀 How to Run
 
@@ -92,10 +92,10 @@ Access at: http://localhost:8501
 ## 💡 Key Benefits
 
 - ✅ **No passwords** - Easy access
-- ✅ **Auto-refresh** - Updates every 3 seconds
-- ✅ **Manual refresh** - Click "Update State" for instant updates
-- ✅ **No refresh issues** - Clean implementation
-- ✅ **Real-time updates** - Everyone sees changes
+- ✅ **Manual updates** - Click buttons for instant updates
+- ✅ **No auto-refresh** - No white screen issues
+- ✅ **No refresh problems** - Clean implementation
+- ✅ **Real-time updates** - Everyone sees changes when they refresh
 - ✅ **Admin control** - Full control over game
 - ✅ **Simple interface** - Easy to use
 - ✅ **Streamlit Cloud ready** - Deploy anywhere
@@ -113,6 +113,7 @@ Access at: http://localhost:8501
 - **Watch the screen** for updates
 - **See your balance** and position
 - **Wait for your turn**
+- **Refresh manually** when needed
 - **No action needed** - admin controls everything
 
 ## 🚀 Ready to Use!
