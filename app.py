@@ -110,6 +110,14 @@ def main():
     
     # Title
     st.title("🏦 The Big Bank Theory")
+    
+    # Refresh button at the top
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🔄 Refresh Page", use_container_width=True, type="primary"):
+            load_game_state()  # Reload from file
+            st.rerun()
+    
     st.markdown("---")
     
     # Current team display
@@ -138,12 +146,20 @@ def main():
         if st.button("🎲 Roll Dice", use_container_width=True, type="primary"):
             dice = roll_dice()
             st.success(f"🎲 {current_team['name']} rolled a {dice}!")
+            # Auto-refresh for everyone
+            import time
+            time.sleep(0.5)  # Small delay to ensure file is saved
+            load_game_state()  # Reload from file
             st.rerun()
     
     with col2:
         if st.button("✅ End Turn", use_container_width=True):
             next_turn()
             st.success("Turn ended!")
+            # Auto-refresh for everyone
+            import time
+            time.sleep(0.5)  # Small delay to ensure file is saved
+            load_game_state()  # Reload from file
             st.rerun()
     
     with col3:
@@ -151,6 +167,10 @@ def main():
             st.session_state.game_state = init_game_state()
             save_game_state()
             st.success("Game reset!")
+            # Auto-refresh for everyone
+            import time
+            time.sleep(0.5)  # Small delay to ensure file is saved
+            load_game_state()  # Reload from file
             st.rerun()
     
     # All teams status
@@ -193,6 +213,10 @@ def main():
             game_state['teams'][team_idx]['balance'] += amount
             save_game_state()
             st.success(f"Balance adjusted by ₹{amount:,}")
+            # Auto-refresh for everyone
+            import time
+            time.sleep(0.5)  # Small delay to ensure file is saved
+            load_game_state()  # Reload from file
             st.rerun()
     
     # Manual position adjustment
@@ -211,6 +235,10 @@ def main():
             game_state['teams'][pos_team_idx]['position'] = new_position
             save_game_state()
             st.success(f"Moved to position {new_position}")
+            # Auto-refresh for everyone
+            import time
+            time.sleep(0.5)  # Small delay to ensure file is saved
+            load_game_state()  # Reload from file
             st.rerun()
     
     # Property management
@@ -232,6 +260,10 @@ def main():
                 game_state['properties'][prop_idx]['owner'] = game_state['teams'][prop_team_idx]['id']
                 save_game_state()
                 st.success(f"Gave {game_state['properties'][prop_idx]['name']} to {game_state['teams'][prop_team_idx]['name']}")
+                # Auto-refresh for everyone
+                import time
+                time.sleep(0.5)  # Small delay to ensure file is saved
+                load_game_state()  # Reload from file
                 st.rerun()
             else:
                 st.error("Property already owned!")
@@ -246,17 +278,25 @@ def main():
         if st.button("💾 Save Game", use_container_width=True):
             save_game_state()
             st.success("Game saved!")
+            # Auto-refresh for everyone
+            import time
+            time.sleep(0.5)  # Small delay to ensure file is saved
+            load_game_state()  # Reload from file
             st.rerun()
     
     with col2:
         if st.button("🔄 Load Game", use_container_width=True):
             load_game_state()
             st.success("Game loaded!")
+            # Auto-refresh for everyone
+            import time
+            time.sleep(0.5)  # Small delay to ensure file is saved
+            load_game_state()  # Reload from file
             st.rerun()
     
     with col3:
-        if st.button("🔄 Refresh Page", use_container_width=True):
-            st.rerun()
+        st.markdown(f"**Current Turn:** {game_state['current_team'] + 1}")
+        st.markdown(f"**Dice Roll:** {game_state['dice_roll'] if game_state['dice_roll'] > 0 else 'None'}")
     
     # Game state info
     st.markdown("---")
@@ -267,7 +307,7 @@ def main():
         st.markdown(f"**Dice Roll:** {game_state['dice_roll'] if game_state['dice_roll'] > 0 else 'None'}")
     
     with col2:
-        st.info("🔄 **Manual Updates:** Click buttons for instant updates | **No auto-refresh** - No white screen issues")
+        st.info("🔄 **Auto-refresh:** All buttons automatically update everyone's screen | **Manual:** Click 'Refresh Page' at top")
     
     # Properties owned by teams
     st.markdown("---")
