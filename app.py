@@ -1,12 +1,13 @@
 """
 The Big Bank Theory - Simple Multiplayer Game
-No passwords, just simple dice rolling and admin control
+Fixed version with reliable auto-refresh and single-click buttons
 """
 import streamlit as st
 import json
 import os
 import random
 from datetime import datetime
+import time
 
 # Game state file
 GAME_STATE_FILE = "game_state.json"
@@ -103,17 +104,12 @@ def main():
     # Load game state
     load_game_state()
     
-    # Auto-refresh every 3 seconds
-    import time
-    if 'last_refresh' not in st.session_state:
-        st.session_state.last_refresh = time.time()
-    
-    current_time = time.time()
-    if current_time - st.session_state.last_refresh > 3:
-        st.session_state.last_refresh = current_time
-        st.rerun()
-    
     game_state = st.session_state.game_state
+    
+    # Auto-refresh using meta tag
+    st.markdown("""
+    <meta http-equiv="refresh" content="3">
+    """, unsafe_allow_html=True)
     
     # Title
     st.title("🏦 The Big Bank Theory")
@@ -145,17 +141,20 @@ def main():
         if st.button("🎲 Roll Dice", use_container_width=True, type="primary"):
             dice = roll_dice()
             st.success(f"🎲 {current_team['name']} rolled a {dice}!")
+            st.rerun()
     
     with col2:
         if st.button("✅ End Turn", use_container_width=True):
             next_turn()
             st.success("Turn ended!")
+            st.rerun()
     
     with col3:
         if st.button("🔄 Reset Game", use_container_width=True):
             st.session_state.game_state = init_game_state()
             save_game_state()
             st.success("Game reset!")
+            st.rerun()
     
     # All teams status
     st.markdown("---")
@@ -197,6 +196,7 @@ def main():
             game_state['teams'][team_idx]['balance'] += amount
             save_game_state()
             st.success(f"Balance adjusted by ₹{amount:,}")
+            st.rerun()
     
     # Manual position adjustment
     st.markdown("#### 📍 Move Team Position")
@@ -214,6 +214,7 @@ def main():
             game_state['teams'][pos_team_idx]['position'] = new_position
             save_game_state()
             st.success(f"Moved to position {new_position}")
+            st.rerun()
     
     # Property management
     st.markdown("#### 🏠 Give Property to Team")
@@ -234,6 +235,7 @@ def main():
                 game_state['properties'][prop_idx]['owner'] = game_state['teams'][prop_team_idx]['id']
                 save_game_state()
                 st.success(f"Gave {game_state['properties'][prop_idx]['name']} to {game_state['teams'][prop_team_idx]['name']}")
+                st.rerun()
             else:
                 st.error("Property already owned!")
     
@@ -241,45 +243,27 @@ def main():
     st.markdown("---")
     st.subheader("📊 Game State")
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         if st.button("💾 Save Game", use_container_width=True):
             save_game_state()
             st.success("Game saved!")
+            st.rerun()
     
     with col2:
         if st.button("🔄 Load Game", use_container_width=True):
             load_game_state()
             st.success("Game loaded!")
+            st.rerun()
     
     with col3:
-        if st.button("🔄 Update State", use_container_width=True):
-            load_game_state()
-            st.session_state.last_refresh = time.time()
-            st.success("State updated!")
-    
-    with col4:
         st.markdown(f"**Current Turn:** {game_state['current_team'] + 1}")
         st.markdown(f"**Dice Roll:** {game_state['dice_roll'] if game_state['dice_roll'] > 0 else 'None'}")
     
     # Auto-refresh status
     st.markdown("---")
-    
-    # Add refresh counter
-    if 'refresh_count' not in st.session_state:
-        st.session_state.refresh_count = 0
-    
-    st.session_state.refresh_count += 1
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.info("🔄 **Auto-refresh:** Every 3 seconds | **Manual:** Click 'Update State' button")
-    
-    with col2:
-        st.markdown(f"**Refresh Count:** {st.session_state.refresh_count}")
-        st.markdown(f"**Last Update:** {datetime.now().strftime('%H:%M:%S')}")
+    st.info("🔄 **Auto-refresh:** Every 3 seconds | **Manual:** Click buttons for instant updates")
     
     # Properties owned by teams
     st.markdown("---")
