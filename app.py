@@ -103,6 +103,16 @@ def main():
     # Load game state
     load_game_state()
     
+    # Auto-refresh every 3 seconds
+    import time
+    if 'last_refresh' not in st.session_state:
+        st.session_state.last_refresh = time.time()
+    
+    current_time = time.time()
+    if current_time - st.session_state.last_refresh > 3:
+        st.session_state.last_refresh = current_time
+        st.rerun()
+    
     game_state = st.session_state.game_state
     
     # Title
@@ -231,7 +241,7 @@ def main():
     st.markdown("---")
     st.subheader("📊 Game State")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         if st.button("💾 Save Game", use_container_width=True):
@@ -244,8 +254,32 @@ def main():
             st.success("Game loaded!")
     
     with col3:
+        if st.button("🔄 Update State", use_container_width=True):
+            load_game_state()
+            st.session_state.last_refresh = time.time()
+            st.success("State updated!")
+    
+    with col4:
         st.markdown(f"**Current Turn:** {game_state['current_team'] + 1}")
         st.markdown(f"**Dice Roll:** {game_state['dice_roll'] if game_state['dice_roll'] > 0 else 'None'}")
+    
+    # Auto-refresh status
+    st.markdown("---")
+    
+    # Add refresh counter
+    if 'refresh_count' not in st.session_state:
+        st.session_state.refresh_count = 0
+    
+    st.session_state.refresh_count += 1
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.info("🔄 **Auto-refresh:** Every 3 seconds | **Manual:** Click 'Update State' button")
+    
+    with col2:
+        st.markdown(f"**Refresh Count:** {st.session_state.refresh_count}")
+        st.markdown(f"**Last Update:** {datetime.now().strftime('%H:%M:%S')}")
     
     # Properties owned by teams
     st.markdown("---")
