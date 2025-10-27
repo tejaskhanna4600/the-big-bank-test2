@@ -126,7 +126,6 @@ def main():
     <div style='background-color: {current_team['color']}; color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;'>
     <h1>Current Turn: {current_team['name']}</h1>
     <h2>Balance: ₹{current_team['balance']:,}</h2>
-    <h3>Position: {current_team['position']} - {game_state['properties'][current_team['position']]['name']}</h3>
     </div>
     """, unsafe_allow_html=True)
     
@@ -188,8 +187,6 @@ def main():
             <div style='border: {border_width} solid {border_color}; padding: 15px; border-radius: 10px; background-color: {team['color']}20;'>
             <h3 style='color: {team['color']}; margin: 0;'>{team['name']}</h3>
             <p style='margin: 5px 0; font-size: 18px; font-weight: bold;'>₹{team['balance']:,}</p>
-            <p style='margin: 5px 0;'>Pos: {team['position']}</p>
-            <p style='margin: 5px 0; font-size: 12px;'>{game_state['properties'][team['position']]['name']}</p>
             </div>
             """, unsafe_allow_html=True)
     
@@ -313,12 +310,47 @@ def main():
     st.markdown("---")
     st.subheader("🏠 Properties Owned")
     
-    for team in game_state['teams']:
-        owned_props = [prop for prop in game_state['properties'] if prop['owner'] == team['id']]
-        if owned_props:
-            st.markdown(f"**{team['name']}:** {', '.join([prop['name'] for prop in owned_props])}")
-        else:
-            st.markdown(f"**{team['name']}:** No properties owned")
+    # Create columns for each team
+    team_cols = st.columns(5)
+    
+    for idx, team in enumerate(game_state['teams']):
+        with team_cols[idx]:
+            owned_props = [prop for prop in game_state['properties'] if prop['owner'] == team['id']]
+            
+            # Team header
+            st.markdown(f"""
+            <div style='background-color: {team['color']}; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; text-align: center;'>
+            <h4 style='margin: 0;'>{team['name']}</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if owned_props:
+                total_value = sum(prop['price'] for prop in owned_props)
+                total_rent = sum(prop['rent'] for prop in owned_props)
+                
+                # Properties list
+                for prop in owned_props:
+                    st.markdown(f"""
+                    <div style='border: 2px solid {team['color']}; padding: 8px; border-radius: 6px; margin-bottom: 5px; background-color: {team['color']}10;'>
+                    <strong style='color: {team['color']};'>{prop['name']}</strong><br>
+                    <small>💰 Price: ₹{prop['price']:,}</small><br>
+                    <small>🏠 Rent: ₹{prop['rent']:,}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Summary
+                st.markdown(f"""
+                <div style='background-color: {team['color']}20; padding: 8px; border-radius: 6px; border: 1px solid {team['color']};'>
+                <small><strong>Total Value:</strong> ₹{total_value:,}</small><br>
+                <small><strong>Total Rent:</strong> ₹{total_rent:,}</small>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style='background-color: #f0f0f0; padding: 15px; border-radius: 6px; text-align: center; border: 2px dashed #ccc;'>
+                <small style='color: #666;'>No properties owned</small>
+                </div>
+                """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
