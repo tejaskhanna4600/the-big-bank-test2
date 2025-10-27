@@ -247,23 +247,44 @@ def main():
         prop_team_idx = int(prop_team_select.split()[1]) - 1
     
     with prop_col2:
-        property_select = st.selectbox("Select Property:", 
-                                     [f"{i}: {prop['name']}" for i, prop in enumerate(game_state['properties']) if prop['price'] > 0])
+        # Create property list with current owner info
+        property_options = []
+        for i, prop in enumerate(game_state['properties']):
+            if prop['price'] > 0:
+                current_owner = "Unowned"
+                if prop['owner']:
+                    owner_team = next(team for team in game_state['teams'] if team['id'] == prop['owner'])
+                    current_owner = owner_team['name']
+                property_options.append(f"{i}: {prop['name']} (Currently: {current_owner})")
+        
+        property_select = st.selectbox("Select Property:", property_options)
         prop_idx = int(property_select.split(':')[0])
     
     with prop_col3:
         if st.button("🏠 Give Property", use_container_width=True):
-            if game_state['properties'][prop_idx]['owner'] is None:
-                game_state['properties'][prop_idx]['owner'] = game_state['teams'][prop_team_idx]['id']
-                save_game_state()
-                st.success(f"Gave {game_state['properties'][prop_idx]['name']} to {game_state['teams'][prop_team_idx]['name']}")
-                # Auto-refresh for everyone
-                import time
-                time.sleep(0.5)  # Small delay to ensure file is saved
-                load_game_state()  # Reload from file
-                st.rerun()
+            current_property = game_state['properties'][prop_idx]
+            target_team = game_state['teams'][prop_team_idx]
+            
+            # Get current owner info for message
+            previous_owner = None
+            if current_property['owner']:
+                previous_owner = next(team for team in game_state['teams'] if team['id'] == current_property['owner'])
+            
+            # Transfer property
+            current_property['owner'] = target_team['id']
+            save_game_state()
+            
+            # Show appropriate success message
+            if previous_owner:
+                st.success(f"🔄 Transferred {current_property['name']} from {previous_owner['name']} to {target_team['name']}")
             else:
-                st.error("Property already owned!")
+                st.success(f"🏠 Gave {current_property['name']} to {target_team['name']}")
+            
+            # Auto-refresh for everyone
+            import time
+            time.sleep(0.5)  # Small delay to ensure file is saved
+            load_game_state()  # Reload from file
+            st.rerun()
     
     # Game state info
     st.markdown("---")
